@@ -433,7 +433,7 @@ class SamplingOptionsResource(Resource):
     """获取采样配置常量"""
 
     def perform_request(self, validated_request_data):
-        sampling_types = [SamplerTypeChoices.RANDOM]
+        sampling_types = [SamplerTypeChoices.RANDOM, SamplerTypeChoices.EMPTY]
         res = {}
         if settings.IS_ACCESS_BK_DATA:
             # 标准字段常量 + 耗时字段
