@@ -95,7 +95,7 @@ class TraceQuery(EsQueryBuilderMixin):
         """
 
         query = self.search
-
+        # test
         ebpf_application = self._get_ebpf_application()
         if ebpf_application:
             app_filter_params = [
@@ -151,7 +151,6 @@ class TraceQuery(EsQueryBuilderMixin):
 
     @classmethod
     def _translate_key(cls, key):
-
         for i, prefix in cls.KEY_PREFIX_TRANSLATE_FIELDS.items():
             if key.startswith(i):
                 return f"{prefix}.{key}"
@@ -163,7 +162,6 @@ class TraceQuery(EsQueryBuilderMixin):
 
     @classmethod
     def _add_logic_filter(cls, query, key, value):
-
         if key == "error":
             query = query.query("bool", must_not=[Q("term", **{"error_count": 0})])
 
@@ -171,7 +169,6 @@ class TraceQuery(EsQueryBuilderMixin):
 
     @classmethod
     def query_by_trace_ids(cls, client, index_name, trace_ids, start_time, end_time):
-
         query = EsSearch(using=client, index=index_name)
         query = cls.add_time(query, start_time, end_time)
         query = cls.add_sort(query, f"-{cls.DEFAULT_SORT_FIELD}")
