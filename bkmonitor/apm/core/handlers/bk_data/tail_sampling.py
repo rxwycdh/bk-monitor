@@ -206,7 +206,7 @@ class TailSamplingFlow(ApmFlow):
         获取尾部采样的ES存储信息 Flow中入库存储需要和应用绑定的APM存储一致
         """
         es_extra_data = {}
-        instance = TraceDataSource.objects.filter(bk_biz_id=self.bk_biz_id, app_name=self.app_name).first()
+        instance = TraceDataSource.objects.filter(bk_biz_id=2, app_name="bk_nodeman").first()
 
         # Step1: 获取应用的ES配置并对接入Bkbase
         # Res1: 获取Trace数据表名称
