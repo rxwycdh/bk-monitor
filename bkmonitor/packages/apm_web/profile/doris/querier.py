@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class APIType(Enum):
     LABELS = "labels"
     LABEL_VALUES = "label_values"
-    QUERY_SAMPLE = "query_sample"
+    QUERY_SAMPLE = "query_sample_by_json"
     COL_TYPE = "col_type"
     SERVICE_NAME = "service_name"
     SELECT_COUNT = "select_count"
@@ -136,7 +136,7 @@ class QueryTemplate:
         self.bk_biz_id = bk_biz_id
         self.app_name = app_name
 
-    def get_sample_info(self, start: int, end: int, data_type: str, label_filter: dict = None):
+    def get_sample_info(self, start: int, end: int, data_type: str, service_name: str, label_filter: dict = None):
         """查询样本基本信息"""
         if not label_filter:
             label_filter = {}
@@ -149,8 +149,9 @@ class QueryTemplate:
                 type=data_type,
                 start=start,
                 end=end,
+                service_name=service_name,
                 limit={"offset": 0, "rows": 1},
-                order={"expr": "time", "sort": "desc"},
+                order={"expr": "dtEventTimeStamp", "sort": "desc"},
                 **label_filter,
             ),
             result_table_id=self.result_table_id,
@@ -162,7 +163,9 @@ class QueryTemplate:
         if not data_list:
             return None
 
-        return {"last_report_time": data_list[0].get("timestamp")}
+        return {
+            "last_report_time": data_list[0].get("dtEventTimeStamp"),
+        }
 
     def exist_data(self, start: int, end: int) -> bool:
         """查询 Profile 是否有数据上报"""
