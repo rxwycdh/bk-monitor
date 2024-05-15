@@ -17,6 +17,7 @@ import traceback
 from abc import ABC
 from typing import List, NamedTuple, Tuple
 
+from django.conf import settings
 from opentelemetry.semconv.resource import ResourceAttributes
 
 from apm import constants
@@ -372,12 +373,8 @@ class TopoHandler:
 
             # 预计算任务
             if pre_calculate_storage.is_valid:
-                # 灰度应用不参与定时任务中的预计算功能
-                from apm.core.discover.precalculation.daemon import (
-                    PrecalculateGrayRelease,
-                )
-
-                if not PrecalculateGrayRelease.exist(self.application.id):
+                if not settings.APM_BMW_WORKER_SUPPORT:
+                    # 如果未开启 BMW 模块 则由定时任务进行预计算
                     pre_calculate_params = [
                         (
                             PrecalculateProcessor(pre_calculate_storage, self.bk_biz_id, self.app_name),
@@ -386,7 +383,6 @@ class TopoHandler:
                         )
                     ]
                     topo_params += pre_calculate_params
-
             pool.map_ignore_exception(self._discover_handle, topo_params)
 
         logger.info(

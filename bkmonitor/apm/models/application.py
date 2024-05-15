@@ -10,6 +10,7 @@ specific language governing permissions and limitations under the License.
 """
 from typing import Optional
 
+from django.conf import settings
 from django.db import models
 from django.db.transaction import atomic
 from django.utils.functional import cached_property
@@ -17,6 +18,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from apm.constants import DATABASE_CONNECTION_NAME
 from apm.models.datasource import MetricDataSource, ProfileDataSource, TraceDataSource
+from apm.task.tasks import start_bmw_daemon_task
 from bkmonitor.utils.cipher import (
     transform_data_id_to_token,
     transform_data_id_to_v1_token,
@@ -98,6 +100,10 @@ class ApmApplication(AbstractRecordModel):
         }
         if application.profile_datasource:
             configs["profile_config"] = application.profile_datasource.to_json()
+
+        # 开启 BMW 模块预计算功能
+        if settings.APM_BMW_WORKER_SUPPORT:
+            start_bmw_daemon_task.delay(application.id)
 
         return configs
 

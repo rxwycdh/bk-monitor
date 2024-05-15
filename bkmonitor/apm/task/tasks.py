@@ -24,6 +24,7 @@ from alarm_backends.service.scheduler.app import app
 from apm.core.application_config import ApplicationConfig
 from apm.core.discover.base import TopoHandler
 from apm.core.discover.precalculation.consul_handler import ConsulHandler
+from apm.core.discover.precalculation.daemon import DaemonTaskHandler
 from apm.core.discover.precalculation.storage import PrecalculateStorage
 from apm.core.discover.profile.base import DiscoverHandler as ProfileDiscoverHandler
 from apm.core.handlers.bk_data.tail_sampling import TailSamplingFlow
@@ -153,3 +154,11 @@ def profile_discover_cron():
         logger.info(f"[profile_discover_cron] finished handle. ({item.bk_biz_id}){item.app_name}")
 
     logger.info(f"[profile_discover_cron] end at {datetime.datetime.now()}")
+
+
+@app.task(ignore_result=True)
+def start_bmw_daemon_task(application_id):
+    """开启 APM 应用的 BMW 模块常驻任务功能 (包含: 预计算、指标发现)"""
+    logger.info(f"[BmwSupport] receive application_id: {application_id} start to create daemon task")
+    DaemonTaskHandler.execute(application_id)
+    logger.info(f"[BmwSupport] application_id: {application_id} start successfully")
