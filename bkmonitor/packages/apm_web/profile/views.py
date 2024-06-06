@@ -273,25 +273,25 @@ class ProfileQueryViewSet(ProfileBaseViewSet):
         # storing data in 2 ways:
         # - global storage, bk_biz_id/space_id level
         # - application storage, application level
-        if validated_data["global_query"]:
-            app_name = BUILTIN_APP_NAME
-            service_name = app_name
-            # TODO: fetch from apm api in the future
-            # we keep the same rule for now
-            bk_biz_id = api.cmdb.get_blueking_biz()
-            result_table_id = f"{bk_biz_id}_profile_{BUILTIN_APP_NAME}"
-        else:
-            bk_biz_id = validated_data["bk_biz_id"]
-            app_name = validated_data["app_name"]
-            service_name = validated_data.get("service_name", DEFAULT_SERVICE_NAME)
-            application_info = self._examine_application(bk_biz_id, app_name)
-            result_table_id = application_info["profiling_config"]["result_table_id"]
+        # if validated_data["global_query"]:
+        #     app_name = BUILTIN_APP_NAME
+        #     service_name = app_name
+        #     # TODO: fetch from apm api in the future
+        #     # we keep the same rule for now
+        #     bk_biz_id = api.cmdb.get_blueking_biz()
+        #     result_table_id = f"{bk_biz_id}_profile_{BUILTIN_APP_NAME}"
+        # else:
+        #     bk_biz_id = validated_data["bk_biz_id"]
+        #     app_name = validated_data["app_name"]
+        #     service_name = validated_data.get("service_name", DEFAULT_SERVICE_NAME)
+        #     application_info = self._examine_application(bk_biz_id, app_name)
+        #     result_table_id = application_info["profiling_config"]["result_table_id"]
 
         return {
-            "bk_biz_id": bk_biz_id,
-            "app_name": app_name,
-            "service_name": service_name,
-            "result_table_id": result_table_id,
+            "bk_biz_id": validated_data["bk_biz_id"],
+            "app_name": validated_data["app_name"],
+            "service_name": validated_data.get("service_name", DEFAULT_SERVICE_NAME),
+            "result_table_id": "2_profile_profiling_demo_proj",
         }
 
     @action(methods=["POST", "GET"], detail=False, url_path="samples")
@@ -404,7 +404,7 @@ class ProfileQueryViewSet(ProfileBaseViewSet):
         """判断此 profile 服务是否是大应用"""
 
         try:
-            response = api.apm_api.query_profile_service_detail(
+            response = api.apm_api.query_profile_services_detail(
                 **{
                     "bk_biz_id": bk_biz_id,
                     "app_name": app_name,
