@@ -491,14 +491,16 @@ class MetricBackendHandler(BkdataCountMixIn, TelemetryBackendHandler):
                     "dimensions_translation": {},
                     "datapoints": datapoints,
                 }
-            ],
+            ]
+            if datapoints
+            else [],
         }
         return histograms
 
     def get_no_data_strategy_config(self, **kwargs):
         return {
             "result_table_id": self.result_table_id,
-            "metric_id": f"sum(count_over_time(custom.{self.result_table_id}[1m]))",
+            "metric_id": f'count({{__name__=~"custom:{self.result_table_id}:__default__:.*"}})',
             "metric_field": None,
             "name": f"BKAPM-{_('无数据告警')}-{self.app.app_name}-{self.telemetry.value}",
             "data_source_label": DataSourceLabel.PROMETHEUS,
@@ -508,7 +510,7 @@ class MetricBackendHandler(BkdataCountMixIn, TelemetryBackendHandler):
                     "data_source_label": DataSourceLabel.PROMETHEUS,
                     "data_type_label": DataTypeLabel.TIME_SERIES,
                     "table": self.result_table_id,
-                    "promql": f"sum(count_over_time(custom.{self.result_table_id}[1m]))",
+                    "promql": f'count({{__name__=~"custom:{self.result_table_id}:__default__:.*"}})',
                     "agg_interval": 60,
                     "alias": "a",
                 }
@@ -596,7 +598,9 @@ class ProfilingBackendHandler(BkdataCountMixIn, TelemetryBackendHandler):
                     "dimensions_translation": {},
                     "datapoints": datapoints,
                 }
-            ],
+            ]
+            if datapoints
+            else [],
         }
         return histograms
 

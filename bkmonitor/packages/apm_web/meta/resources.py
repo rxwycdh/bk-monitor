@@ -1695,7 +1695,7 @@ class NoDataStrategyInfoResource(Resource):
     class RequestSerializer(serializers.Serializer):
         application_id = serializers.IntegerField(required=True, label="应用ID")
         telemetry_data_type = serializers.ChoiceField(
-            label="采集类型", choices=TelemetryDataType.values(), required=False, default=None
+            label="采集类型", choices=TelemetryDataType.values(), required=False, default=TelemetryDataType.TRACE.value
         )
 
     @classmethod
@@ -1858,7 +1858,7 @@ class NoDataStrategyInfoResource(Resource):
         telemetry_data_type = validated_request_data["telemetry_data_type"]
 
         if telemetry_data_type == TelemetryDataType.PROFILING.value:
-            return []
+            return {}
 
         # 获取应用
         try:
@@ -1866,9 +1866,8 @@ class NoDataStrategyInfoResource(Resource):
         except Application.DoesNotExist:
             raise ValueError(_("应用不存在"))
         # 获取策略
-        fetch_type = TelemetryDataType.values() if telemetry_data_type is None else [telemetry_data_type]
-        strategy_configs = [self.gen_strategy_config(app, telemetry_data_type=_type) for _type in fetch_type]
-        return strategy_configs
+        strategy_config = self.gen_strategy_config(app, telemetry_data_type=telemetry_data_type)
+        return strategy_config
 
 
 class NoDataStrategyStatusResource(Resource):
