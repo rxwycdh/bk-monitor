@@ -769,7 +769,7 @@ class OtlpProtocol:
 class TelemetryDataType(Enum):
     METRIC = "metric"
     LOG = "log"
-    TRACING = "tracing"
+    TRACE = "trace"
     PROFILING = "profiling"
 
     @classmethod
@@ -777,7 +777,7 @@ class TelemetryDataType(Enum):
         return [
             (cls.METRIC, _("指标")),
             (cls.LOG, _("日志")),
-            (cls.TRACING, _("调用链")),
+            (cls.TRACE, _("调用链")),
             (cls.PROFILING, _("性能分析")),
         ]
 
@@ -786,7 +786,7 @@ class TelemetryDataType(Enum):
         return {
             self.METRIC.value: _lazy("指标"),
             self.LOG.value: _lazy("日志"),
-            self.TRACING.value: _lazy("调用链"),
+            self.TRACE.value: _lazy("调用链"),
             self.PROFILING.value: _lazy("性能分析"),
         }.get(self.value, self.value)
 
@@ -795,7 +795,7 @@ class TelemetryDataType(Enum):
         return {
             self.METRIC.value: "metric",
             self.LOG.value: "log",
-            self.TRACING.value: "trace",
+            self.TRACE.value: "trace",
             self.PROFILING.value: "profiling",
         }.get(self.value)
 
@@ -808,9 +808,15 @@ class TelemetryDataType(Enum):
         return [
             {"id": cls.METRIC.value, "name": _("指标")},
             {"id": cls.LOG.value, "name": _("日志")},
-            {"id": cls.TRACING.value, "name": _("调用链")},
+            {"id": cls.TRACE.value, "name": _("调用链")},
             {"id": cls.PROFILING.value, "name": _("性能分析")},
         ]
+
+    @cached_property
+    def no_data_strategy_enabled(self):
+        return {
+            self.PROFILING.value: False,
+        }.get(self.value, True)
 
 
 class FormatType:
@@ -830,15 +836,18 @@ class BkCollectorComp:
     NAMESPACE = "bkmonitor-operator"
 
     DEPLOYMENT_NAME = "bkm-collector"
+
+    # ConfigMap 模版
     # ConfigMap: 平台配置名称
-    CONFIG_MAP_PLATFORM_TPL_NAME = "bkm-collector-platform-tpl"
+    CONFIG_MAP_PLATFORM_TPL_NAME = "bk-collector-platform.conf.tpl"
     # ConfigMap: 应用配置名称
-    CONFIG_MAP_APPLICATION_TPL_NAME = "bkm-collector-application-tpl"
-    # bk-collector ConfigMap 官方标签
-    CONFIG_MAP_LABELS = {
-        "component": "bk-collector",
-        "template": "true",
-    }
+    CONFIG_MAP_APPLICATION_TPL_NAME = "bk-collector-application.conf.tpl"
+
+    # Secrets 配置
+    SECRET_PLATFORM_NAME = "bk-collector-platform"
+    SECRET_PLATFORM_CONFIG_FILENAME_NAME = "bk-collector-platform.conf"
+    SECRET_APPLICATION_NAME = "bk-collector-application-{}-{}"
+    SECRET_APPLICATION_CONFIG_FILENAME_NAME = "bk-collector-application-{}.conf"
 
     # 缓存 KEY: 安装了 bk-collector 的集群 id 列表
     CACHE_KEY_CLUSTER_IDS = "bk-collector:clusters"

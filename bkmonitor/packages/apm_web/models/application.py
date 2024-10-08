@@ -399,7 +399,6 @@ class Application(AbstractRecordModel):
         datasource_option=None,
         plugin_config=None,
     ):
-
         create_params = {
             "bk_biz_id": bk_biz_id,
             "app_name": app_name,
@@ -431,7 +430,7 @@ class Application(AbstractRecordModel):
 
         application.set_init_datasource(
             application_info["datasource_info"],
-            datasource_option,
+            application_info["datasource_option"],
             enabled_profiling,
             enabled_trace,
             enabled_metric,
@@ -474,7 +473,7 @@ class Application(AbstractRecordModel):
 
     @classmethod
     def get_output_param(cls, application_id):
-        bk_data_token = api.apm_api.detail_application({"application_id": application_id})["bk_data_token"]
+        token = api.apm_api.detail_application({"application_id": application_id})["token"]
         # 获取上报地址
         if settings.CUSTOM_REPORT_DEFAULT_PROXY_DOMAIN:
             host = settings.CUSTOM_REPORT_DEFAULT_PROXY_DOMAIN[0]
@@ -482,7 +481,7 @@ class Application(AbstractRecordModel):
             host = settings.CUSTOM_REPORT_DEFAULT_PROXY_IP[0]
         else:
             return {}
-        return {"bk_data_token": bk_data_token, "host": host}
+        return {"token": token, "host": host}
 
     @classmethod
     def stop_plugin_config(cls, application_id):
@@ -530,8 +529,12 @@ class Application(AbstractRecordModel):
         self.is_enabled_log = enabled_log
         # 应用创建时根据是否创建了 profiling 作为开启/关闭状态
         self.save()
+
         ApmMetaConfig.application_config_setup(
             self.application_id, self.APPLICATION_DATASOURCE_CONFIG_KEY, datasource_option
+        )
+        ApmMetaConfig.application_config_setup(
+            self.application_id, self.APPLICATION_LOG_DATASOURCE_CONFIG_KEY, datasource_option
         )
 
     def set_init_dimensions_config(self):

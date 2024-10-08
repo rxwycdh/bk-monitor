@@ -122,11 +122,7 @@ from constants.apm import (
     TailSamplingSupportMethod,
     TelemetryDataType,
 )
-from constants.data_source import (
-    ApplicationsResultTableLabel,
-    DataSourceLabel,
-    DataTypeLabel,
-)
+from constants.data_source import ApplicationsResultTableLabel
 from constants.result_table import ResultTableField
 from core.drf_resource import Resource, api, resource
 from monitor.models import ApplicationConfig
@@ -191,7 +187,7 @@ class CreateApplicationResource(Resource):
         plugin_config = PluginConfigSerializer(required=False)
         # ↓ 四个 Module 的开关
         enabled_profiling = serializers.BooleanField(label="是否开启 Profiling 功能", required=True)
-        enabled_trace = serializers.BooleanField(label="是否开启 Tracing 功能", required=True)
+        enabled_trace = serializers.BooleanField(label="是否开启 Trace 功能", required=True)
         enabled_metric = serializers.BooleanField(label="是否开启 Metric 功能", required=True)
         enabled_log = serializers.BooleanField(label="是否开启 Log 功能", required=True)
 
@@ -232,7 +228,7 @@ class CreateApplicationResource(Resource):
         from apm_web.tasks import APMEvent, report_apm_application_event
 
         switch_on_data_sources = {
-            TelemetryDataType.TRACING.value: app.is_enabled_trace,
+            TelemetryDataType.TRACE.value: app.is_enabled_trace,
             TelemetryDataType.PROFILING.value: app.is_enabled_profiling,
             TelemetryDataType.METRIC.value: app.is_enabled_metric,
             TelemetryDataType.LOG.value: app.is_enabled_log,
@@ -282,7 +278,7 @@ class ApplicationInfoResource(Resource):
     class RequestSerializer(serializers.Serializer):
         application_id = serializers.IntegerField(label="应用id")
         telemetry_data_type = serializers.CharField(
-            label="数据源类型", max_length=255, default=TelemetryDataType.TRACING.value
+            label="数据源类型", max_length=255, default=TelemetryDataType.TRACE.value
         )
 
     class ResponseSerializer(serializers.ModelSerializer):
@@ -395,7 +391,7 @@ class ApplicationInfoResource(Resource):
             # 处理实例名配置
             self.handle_instance_name_config(instance, data)
             # 处理存储信息配置
-            self.handle_es_storage_shards(instance, data)
+            # self.handle_es_storage_shards(instance, data)
             # 处理采样配置
             self.handle_sampler_config(instance, data)
             # 处理维度配置
@@ -460,7 +456,7 @@ class StartResource(Resource):
     def perform_request(self, validated_data):
         application = Application.objects.get(application_id=validated_data["application_id"])
 
-        if validated_data["type"] == TelemetryDataType.TRACING.value:
+        if validated_data["type"] == TelemetryDataType.TRACE.value:
             application.is_enabled_trace = True
             Application.start_plugin_config(validated_data["application_id"])
         elif validated_data["type"] == TelemetryDataType.PROFILING.value:
@@ -500,7 +496,7 @@ class StopResource(Resource):
     def perform_request(self, validated_data):
         application = Application.objects.get(application_id=validated_data["application_id"])
 
-        if validated_data["type"] == TelemetryDataType.TRACING.value:
+        if validated_data["type"] == TelemetryDataType.TRACE.value:
             application.is_enabled_trace = False
             Application.stop_plugin_config(validated_data["application_id"])
         elif validated_data["type"] == TelemetryDataType.PROFILING.value:
@@ -510,7 +506,7 @@ class StopResource(Resource):
         elif validated_data["type"] == TelemetryDataType.LOG.value:
             application.is_enabled_log = False
 
-        res = api.apm_api.stop_application(validated_data, type=TelemetryDataType.TRACING.value)
+        res = api.apm_api.stop_application(validated_data, type=TelemetryDataType.TRACE.value)
         application.save()
 
         from apm_web.tasks import APMEvent, report_apm_application_event
@@ -1285,8 +1281,7 @@ class QueryExceptionEventResource(PageListResource):
 class MetaInstrumentGuides(Resource):
     class RequestSerializer(serializers.Serializer):
         bk_biz_id = serializers.IntegerField(label="业务ID")
-        app_name = serializers.CharField(label="应用名称", required=False)
-        application_id = serializers.CharField(label="应用名称", required=False)
+        app_name = serializers.CharField(label="应用名称")
         base_endpoint = serializers.URLField(label="接收端地址")
 
         languages = serializers.ListSerializer(
@@ -1311,13 +1306,11 @@ class MetaInstrumentGuides(Resource):
         OTLP_EXPORTER_HTTP_PORT = 4318
 
         def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-            attrs["app_name"] = attrs.get("app_name") or attrs.get("application_id")
             application_info: Dict[str, Any] = ApplicationInfoByAppNameResource().request(
                 {"app_name": attrs["app_name"], "bk_biz_id": attrs["bk_biz_id"]}
             )
             data_token: str = QueryBkDataToken().request({"application_id": application_info["application_id"]})
 
-            datasource_switches: Dict[str, Any] = application_info.get("switches") or {}
             attrs["access_config"] = {
                 "token": data_token,
                 "otlp": {
@@ -1326,13 +1319,13 @@ class MetaInstrumentGuides(Resource):
                     "protocol": OtlpProtocol.GRPC,
                     "endpoint": f"{attrs['base_endpoint']}:{self.OTLP_EXPORTER_GRPC_PORT}",
                     "http_endpoint": f"{attrs['base_endpoint']}:{self.OTLP_EXPORTER_HTTP_PORT}",
-                    "enable_metrics": datasource_switches.get("metric", False),
-                    "enable_logs": datasource_switches.get("log", False),
-                    "enable_traces": datasource_switches.get("tracing", False),
+                    "enable_metrics": application_info.get("is_enabled_metric", False),
+                    "enable_logs": application_info.get("is_enabled_log", False),
+                    "enable_traces": application_info.get("is_enabled_trace", False),
                 },
                 "profiling": {
                     # 语意参考：https://grafana.com/docs/pyroscope/latest/configure-client/
-                    "enabled": datasource_switches.get("profiling", False),
+                    "enabled": application_info.get("is_enabled_profiling", False),
                     "endpoint": f"{attrs['base_endpoint']}:{self.OTLP_EXPORTER_HTTP_PORT}/pyroscope",
                 },
             }
@@ -1577,7 +1570,7 @@ class QueryBkDataToken(Resource):
         application_id = serializers.IntegerField(label="应用id")
 
     def perform_request(self, validated_request_data):
-        return api.apm_api.detail_application(validated_request_data)["bk_data_token"]
+        return api.apm_api.detail_application(validated_request_data)["token"]
 
 
 class DataViewConfigResource(Resource):
@@ -1622,7 +1615,7 @@ class DataSamplingResource(Resource):
     class RequestSerializer(serializers.Serializer):
         application_id = serializers.IntegerField(label="应用id")
         telemetry_data_type = serializers.ChoiceField(
-            label="采集类型", choices=TelemetryDataType.values(), default=TelemetryDataType.TRACING.name
+            label="采集类型", choices=TelemetryDataType.values(), default=TelemetryDataType.TRACE.name
         )
         size = serializers.IntegerField(required=False, label="拉取条数", default=10)
 
@@ -1705,7 +1698,8 @@ class NoDataStrategyInfoResource(Resource):
             label="采集类型", choices=TelemetryDataType.values(), required=False, default=None
         )
 
-    def get_config_key(self, telemetry_data_type: str):
+    @classmethod
+    def get_config_key(cls, telemetry_data_type: str):
         return nodata_error_strategy_config_mapping.get(telemetry_data_type, NODATA_ERROR_STRATEGY_CONFIG_KEY)
 
     def get_strategy(self, bk_biz_id: int, app: Application, telemetry_data_type: str):
@@ -1749,18 +1743,15 @@ class NoDataStrategyInfoResource(Resource):
         """创建策略并返回ID"""
         # 获取告警组
         group_id = cls.get_notice_group(bk_biz_id, app, strategy_config)
-        result_table_id = app.fetch_datasource_info(
-            TelemetryDataType(telemetry_data_type).datasource_type, attr_name="result_table_id"
-        )
-        if not result_table_id:
-            raise ValueError(_("获取strategy result_table_id 失败"))
-        # 初始化策略配置
-        metric_id = f"custom.{result_table_id}.bk_apm_count"
+        register_config = telemetry_handler_registry(telemetry_data_type, app=app).get_no_data_strategy_config()
+        if not register_config:
+            return
+
         config = {
             "bk_biz_id": bk_biz_id,
             # 默认关闭
             "is_enabled": False,
-            "name": "BKAPM-{}-{}".format(_("无数据告警"), app.app_name),
+            "name": register_config["name"],
             "labels": ["BKAPM"],
             "scenario": ApplicationsResultTableLabel.application_check,
             "detects": [
@@ -1779,7 +1770,7 @@ class NoDataStrategyInfoResource(Resource):
             ],
             "items": [
                 {
-                    "name": "BK_APM_COUNT",
+                    "name": register_config["name"],
                     "no_data_config": {
                         "is_enabled": False,
                         "continuous": DEFAULT_NO_DATA_PERIOD,
@@ -1793,28 +1784,7 @@ class NoDataStrategyInfoResource(Resource):
                             "unit_prefix": "",
                         }
                     ],
-                    "query_configs": [
-                        {
-                            "data_source_label": DataSourceLabel.CUSTOM,
-                            "data_type_label": DataTypeLabel.TIME_SERIES,
-                            "alias": "a",
-                            "result_table_id": f"{result_table_id}",
-                            "agg_method": "SUM",
-                            "agg_interval": 60,
-                            "agg_dimension": [],
-                            "agg_condition": [],
-                            "metric_field": "bk_apm_count",
-                            "unit": "ns",
-                            "metric_id": metric_id,
-                            "index_set_id": "",
-                            "query_string": "*",
-                            "custom_event_name": "bk_apm_count",
-                            "functions": [],
-                            "time_field": "time",
-                            "bkmonitor_strategy_id": "bk_apm_count",
-                            "alert_name": "bk_apm_count",
-                        }
-                    ],
+                    "query_configs": register_config["query_configs"],
                     "target": [],
                 }
             ],
@@ -1886,6 +1856,10 @@ class NoDataStrategyInfoResource(Resource):
         # 获取请求信息
         application_id = validated_request_data["application_id"]
         telemetry_data_type = validated_request_data["telemetry_data_type"]
+
+        if telemetry_data_type == TelemetryDataType.PROFILING.value:
+            return []
+
         # 获取应用
         try:
             app = Application.objects.get(application_id=application_id)
@@ -1903,7 +1877,7 @@ class NoDataStrategyStatusResource(Resource):
     class RequestSerializer(serializers.Serializer):
         application_id = serializers.IntegerField(label="应用ID")
         telemetry_data_type = serializers.ChoiceField(
-            label="数据类型", choices=TelemetryDataType.values(), default=TelemetryDataType.TRACING.value
+            label="数据类型", choices=TelemetryDataType.values(), default=TelemetryDataType.TRACE.value
         )
 
     def get_config_key(self, telemetry_data_type: str):
@@ -1913,6 +1887,9 @@ class NoDataStrategyStatusResource(Resource):
         # 获取请求信息
         application_id = validated_request_data["application_id"]
         telemetry_data_type = validated_request_data["telemetry_data_type"]
+        # 不支持无数据告警
+        if not TelemetryDataType(telemetry_data_type).no_data_strategy_enabled:
+            return
         # 获取应用及配置信息
         try:
             app = Application.objects.get(application_id=application_id)
@@ -1931,15 +1908,16 @@ class NoDataStrategyStatusResource(Resource):
         strategy_ids = [strategy["id"] for strategy in strategies]
         # 检测策略存在情况，不存在则创建
         if strategy_id not in strategy_ids:
-            strategy_id = NoDataStrategyInfoResource.registry_strategy(app.bk_biz_id, app, config, telemetry_data_type)[
-                "id"
-            ]
+            new_strategy = NoDataStrategyInfoResource.registry_strategy(app.bk_biz_id, app, config, telemetry_data_type)
+            if new_strategy:
+                strategy_id = new_strategy["id"]
         # 更新策略状态
-        resource.strategies.update_partial_strategy_v2(
-            bk_biz_id=app.bk_biz_id,
-            ids=[strategy_id],
-            edit_data={"is_enabled": self.is_enabled},
-        )
+        if strategy_id:
+            resource.strategies.update_partial_strategy_v2(
+                bk_biz_id=app.bk_biz_id,
+                ids=[strategy_id],
+                edit_data={"is_enabled": self.is_enabled},
+            )
         return
 
 

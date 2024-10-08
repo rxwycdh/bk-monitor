@@ -8,6 +8,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 """
+import uuid
 from typing import Optional
 
 from django.conf import settings
@@ -194,6 +195,7 @@ class ApmApplication(AbstractRecordModel):
             bk_biz_id=bk_biz_id,
             app_name=app_name,
             app_alias=app_alias,
+            token=uuid.uuid4().hex,  # 长度 32，(16 个随机字符的 16 进制表示)
             description=description,
         )
         # step2: 创建结果表 (创建的时候 Trace 和 Log 使用同一个数据源)
@@ -219,6 +221,7 @@ class ApmApplication(AbstractRecordModel):
             "app_name": app_name,
             "application_id": application.id,
             "datasource_info": datasource_info,
+            "datasource_option": es_storage_config,
         }
 
     @cached_property
@@ -238,16 +241,24 @@ class ApmApplication(AbstractRecordModel):
         return LogDataSource.objects.filter(bk_biz_id=self.bk_biz_id, app_name=self.app_name).first()
 
     def get_bk_data_token(self):
-        if not self.metric_datasource:
-            return ""
+        # 1. 优先使用 model 里的 token
+        if self.token:
+            return self.token
+
+        # 2. 兼容逻辑，保留下面的 token 生成逻辑(历史已创建的应用，使用的是动态生成的 token)
         params = {
-            "trace_data_id": self.trace_datasource.bk_data_id,
-            "metric_data_id": self.metric_datasource.bk_data_id,
             "bk_biz_id": self.bk_biz_id,
             "app_name": self.app_name,
         }
+        if self.trace_datasource:
+            params["trace_data_id"] = self.trace_datasource.bk_data_id
+        if self.metric_datasource:
+            params["metric_data_id"] = self.metric_datasource.bk_data_id
+        if self.log_datasource:
+            params["log_data_id"] = self.log_datasource.bk_data_id
         if self.profile_datasource:
             params["profile_data_id"] = self.profile_datasource.bk_data_id
+            # 一开始没有预留 profile 的位置，所以如果开启了 profile，需要走单独的函数生成 token
             return transform_data_id_to_v1_token(**params)
         return transform_data_id_to_token(**params)
 

@@ -23,60 +23,41 @@
  * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-import { Component, Prop, Watch } from 'vue-property-decorator';
-import { Component as tsc } from 'vue-tsx-support';
+import type { INodeType, TargetObjectType } from 'monitor-pc/components/monitor-ip-selector/typing';
 
-import './tabList.scss';
-
-interface ITab {
+export interface ICreateAppFormData {
   name: string;
-  label: string;
-  status: 'disabled' | 'no_data' | 'normal';
+  enName: string;
+  desc: string;
+  pluginId: string;
+  enableProfiling: boolean;
+  enableTracing: boolean;
+  plugin_config?: {
+    target_node_type: INodeType;
+    target_object_type: TargetObjectType;
+    target_nodes: any[];
+    data_encoding: string;
+    paths: string[];
+  };
 }
 
-interface IProps {
-  tabList: ITab[];
-  activeTab: string;
+export interface IGuideLink {
+  access_url: string;
+  best_practice: string;
+  metric_description: string;
 }
-interface IEvent {
-  onChange: (active: string) => void;
-}
-@Component
-export default class TabList extends tsc<IProps, IEvent> {
-  @Prop({ type: String }) activeTab: string;
-  @Prop({ type: Array, default: () => [] }) tabList: ITab[];
 
-  active = '';
-  @Watch('activeTab', { immediate: true })
-  handleChange(v) {
-    this.active = v;
-  }
-  handleActiveChange(item: ITab) {
-    // 暂时去掉
-    if (!item.status || item.status === 'disabled') {
-      return;
-    }
-    this.active = item.name;
-    this.$emit('change', item.name);
-  }
-  render() {
-    return (
-      <div class='tab-list-wrap-app-config'>
-        <ul class='tab-list'>
-          {this.tabList.map(item => {
-            return (
-              <li
-                key={item.name}
-                class={[{ active: this.active === item.name }, `status-${item.status || 'disabled'}`]}
-                onClick={() => this.handleActiveChange(item)}
-              >
-                <span class={['point']} />
-                <span class='tab-text'>{this.$t(item.label)}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    );
-  }
+export interface IAppListItem {
+  app_alias: string;
+  app_name: string;
+  application_id: number;
+  firstCode: string;
+  permission: {
+    [key: string]: boolean;
+  };
+  loading: false;
+  service_count?: number;
+  firstCodeColor: string;
+  profiling_data_status: string;
+  data_status: string;
 }

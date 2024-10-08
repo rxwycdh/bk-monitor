@@ -102,8 +102,8 @@ class CreateApplicationResource(Resource):
         description = serializers.CharField(label="描述", required=False, max_length=255, default="", allow_blank=True)
         es_storage_config = DatasourceConfigRequestSerializer(label="数据库配置", required=False, allow_null=True)
         # ↓ 四个 Module 开关
-        enabled_profiling = serializers.BooleanField(label="是否开启性能分析", required=True)
-        enabled_trace = serializers.BooleanField(label="是否开启 Tracing 功能", required=True)
+        enabled_profiling = serializers.BooleanField(label="是否开启 Profiling 功能", required=True)
+        enabled_trace = serializers.BooleanField(label="是否开启 Trace 功能", required=True)
         enabled_metric = serializers.BooleanField(label="是否开启 Metric 功能", required=True)
         enabled_log = serializers.BooleanField(label="是否开启 Log 功能", required=True)
 
@@ -175,7 +175,7 @@ class CreateApplicationSimpleResource(Resource):
 
         self.fill_default(validated_request_data)
         app = CreateApplicationResource()(**validated_request_data)
-        return ApplicationInfoResource()(application_id=app["application_id"])["bk_data_token"]
+        return ApplicationInfoResource()(application_id=app["application_id"])["token"]
 
 
 class ApplyDatasourceResource(Resource):
@@ -217,7 +217,7 @@ class StartApplicationResource(Resource):
         except ApmApplication.DoesNotExist:
             raise ValueError(_("应用不存在"))
 
-        if validated_request_data["type"] == TelemetryDataType.TRACING.value:
+        if validated_request_data["type"] == TelemetryDataType.TRACE.value:
             return application.start_trace()
 
         if validated_request_data["type"] == TelemetryDataType.PROFILING.value:
@@ -241,7 +241,7 @@ class StopApplicationResource(Resource):
         except ApmApplication.DoesNotExist:
             raise ValueError(_("应用不存在"))
 
-        if validated_request_data["type"] == TelemetryDataType.TRACING.value:
+        if validated_request_data["type"] == TelemetryDataType.TRACE.value:
             return application.stop_trace()
 
         if validated_request_data["type"] == TelemetryDataType.PROFILING.value:
@@ -292,7 +292,7 @@ class ApplicationInfoResource(Resource):
 
         def to_representation(self, instance):
             data = super(ApplicationInfoResource.ResponseSerializer, self).to_representation(instance)
-            data["bk_data_token"] = instance.get_bk_data_token()
+            data["token"] = instance.get_bk_data_token()
             if instance.metric_datasource:
                 data["metric_config"] = instance.metric_datasource.to_json()
             if instance.trace_datasource:

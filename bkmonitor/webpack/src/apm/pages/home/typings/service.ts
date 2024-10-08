@@ -23,60 +23,57 @@
  * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-import { Component, Prop, Watch } from 'vue-property-decorator';
-import { Component as tsc } from 'vue-tsx-support';
-
-import './tabList.scss';
-
-interface ITab {
-  name: string;
-  label: string;
-  status: 'disabled' | 'no_data' | 'normal';
+export interface IParams {
+  service_name: string;
+  app_name: string;
 }
 
-interface IProps {
-  tabList: ITab[];
-  activeTab: string;
+export interface ICollect {
+  is_collect: boolean;
+  api: string;
+  params: IParams;
 }
-interface IEvent {
-  onChange: (active: string) => void;
-}
-@Component
-export default class TabList extends tsc<IProps, IEvent> {
-  @Prop({ type: String }) activeTab: string;
-  @Prop({ type: Array, default: () => [] }) tabList: ITab[];
 
-  active = '';
-  @Watch('activeTab', { immediate: true })
-  handleChange(v) {
-    this.active = v;
-  }
-  handleActiveChange(item: ITab) {
-    // 暂时去掉
-    if (!item.status || item.status === 'disabled') {
-      return;
-    }
-    this.active = item.name;
-    this.$emit('change', item.name);
-  }
-  render() {
-    return (
-      <div class='tab-list-wrap-app-config'>
-        <ul class='tab-list'>
-          {this.tabList.map(item => {
-            return (
-              <li
-                key={item.name}
-                class={[{ active: this.active === item.name }, `status-${item.status || 'disabled'}`]}
-                onClick={() => this.handleActiveChange(item)}
-              >
-                <span class={['point']} />
-                <span class='tab-text'>{this.$t(item.label)}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    );
-  }
+export interface IServiceName {
+  target: string;
+  value: string;
+  url: string;
+  key: string;
+  icon: string;
+  syncTime: boolean;
+}
+
+export interface IDataStatus {
+  icon: string;
+}
+
+export interface IOperation {
+  target: string;
+  value: string;
+  url: string;
+  key: string;
+  icon: string;
+}
+
+export interface IMetric {
+  datapoints: any; // You can replace 'any' with a more specific type if you have it
+  unit: null | string;
+}
+
+export interface IAPMService {
+  app_name: string;
+  collect: ICollect;
+  service_name: IServiceName;
+  type: string;
+  language: string;
+  metric_data_status: IDataStatus;
+  log_data_status: IDataStatus;
+  trace_data_status: IDataStatus;
+  profiling_data_status: IDataStatus;
+  operation: IOperation[];
+  category: string;
+  kind: string;
+  request_count: IMetric;
+  error_rate: IMetric;
+  avg_duration: IMetric;
 }

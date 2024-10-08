@@ -1,15 +1,32 @@
-.new-add-application {
-  .content-main {
-    position: relative;
-    height: calc(100vh - 60px);
-    max-height: calc(100vh - 60px);
+@import '../../../static/scss/variate.scss';
+
+.app-add-wrap {
+  height: 100%;
+
+  .mr8 {
+    margin-right: 8px;
+  }
+
+  .app-add-content {
+    height: calc(100% - 48px);
+    padding: 16px 24px;
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    .app-add-desc {
+      margin-bottom: 12px;
+
+      .app-add-question {
+        margin-bottom: 12px;
+        font-size: 16px;
+        color: #313238;
+      }
+    }
 
     .form-wrap {
-      box-sizing: border-box;
-      max-height: calc(100vh - 111px);
-      padding: 28px 40px;
-      overflow-y: auto;
-      background-color: #fff;
+      min-height: calc(-440px + 100vh);
+      padding: 24px 32px;
+      background-color: rgb(255, 255, 255);
 
       .bk-label-text {
         font-size: 12px;
@@ -35,7 +52,9 @@
       .report-type-wrap {
         display: flex;
         align-items: center;
-        width: 100%;
+        width: 560px;
+        min-height: 56px;
+        padding: 8px 0 4px 0;
         margin-bottom: 10px;
         background: #fafbfd;
         border: 1px solid #dcdee5;
@@ -71,9 +90,8 @@
           flex-direction: column;
 
           .middle-content-title {
-            height: 20px;
-            font-family: MicrosoftYaHei-Bold;
             font-size: 12px;
+            font-weight: bold;
             font-weight: 700;
             line-height: 20px;
             color: #63656e;
@@ -81,8 +99,6 @@
           }
 
           .middle-content-text {
-            margin-right: 16px;
-            font-family: MicrosoftYaHei;
             font-size: 12px;
             line-height: 20px;
             color: #979ba5;
@@ -91,16 +107,8 @@
         }
 
         .report-right-content {
-          margin-right: 25px;
+          margin: 0 24px 0 16px;
         }
-      }
-    }
-
-    .footer-wrap {
-      padding: 0 40px;
-
-      .mr8 {
-        margin-right: 8px;
       }
     }
   }
